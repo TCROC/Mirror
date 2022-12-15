@@ -29,8 +29,53 @@ namespace Mirror
 #if UNITY_2020_3_OR_NEWER
         public static double localTime
         {
+            // Time.timeAsDouble can only be called from Unity's main thread
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => Time.timeAsDouble;
+            get => System.Threading.Thread.CurrentThread.ManagedThreadId == mainThreadId
+                ? Time.timeAsDouble
+                : LocalTimeInternal;
+        }
+
+        /// <summary>
+        /// Is set by NetworkManager.Update to NetworkTime.localtime 
+        /// so that NetworkTime.localTime is threadsafe.
+        /// </summary>
+        internal static double LocalTimeInternal
+        {
+            get
+            {
+                localTimeLock.EnterReadLock();
+                var val = localTimePrivate;
+                localTimeLock.ExitReadLock();
+                return val;
+            }
+            set
+            {
+                localTimeLock.EnterWriteLock();
+                localTimePrivate = value;
+                localTimeLock.ExitWriteLock();
+            }
+        }
+        static double localTimePrivate;
+        static System.Threading.ReaderWriterLockSlim localTimeLock;
+
+        static int mainThreadId;
+
+        [RuntimeInitializeOnLoadMethod]
+        static void OnRuntimeMethodLoad()
+        {
+            mainThreadId = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            localTimeLock ??= new System.Threading.ReaderWriterLockSlim();
+            Application.quitting += Quit;
+        }
+
+        static void Quit()
+        {
+            if (localTimeLock != null)
+            {
+                localTimeLock.Dispose();
+                localTimeLock = null;
+            }
         }
 #else
         // need stopwatch for older Unity versions, but it's quite slow.

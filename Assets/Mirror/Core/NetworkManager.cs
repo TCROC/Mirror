@@ -228,6 +228,7 @@ namespace Mirror
         // make sure to call base.Update() when overwriting
         public virtual void Update()
         {
+            NetworkTime.LocalTimeInternal = NetworkTime.localTime;
             ApplyConfiguration();
         }
 
