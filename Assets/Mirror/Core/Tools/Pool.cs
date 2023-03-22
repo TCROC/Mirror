@@ -1,6 +1,7 @@
 ﻿// Pool to avoid allocations (from libuv2k)
 // API consistent with Microsoft's ObjectPool<T>.
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
@@ -10,7 +11,7 @@ namespace Mirror
     {
         // Mirror is single threaded, no need for concurrent collections.
         // stack increases the chance that a reused writer remains in cache.
-        readonly Stack<T> objects = new Stack<T>();
+        readonly ConcurrentStack<T> objects = new ConcurrentStack<T>();
 
         // some types might need additional parameters in their constructor, so
         // we use a Func<T> generator
@@ -32,7 +33,7 @@ namespace Mirror
 
         // take an element from the pool, or create a new one if empty
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public T Get() => objects.Count > 0 ? objects.Pop() : objectGenerator();
+        public T Get() => objects.Count > 0 ? objects.TryPop(out var obj) ? obj :  objectGenerator() : objectGenerator();
 
         // return an element to the pool
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
