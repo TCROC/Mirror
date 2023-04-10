@@ -527,7 +527,7 @@ namespace Mirror.Tests
             };
 
             // create connections
-            CreateLocalConnectionPair(out LocalConnectionToClient owner, out LocalConnectionToServer clientConnection);
+            Utils.CreateLocalConnections(out LocalConnectionToClient owner, out LocalConnectionToServer clientConnection);
             owner.isReady = true;
 
             // setup NetworkServer/Client connections so messages are handled
@@ -737,6 +737,7 @@ namespace Mirror.Tests
                 out StopClientCalledNetworkBehaviour comp);
 
             // call OnStopClient in identity
+            identity.OnStartClient();
             identity.OnStopClient();
             Assert.That(comp.called, Is.EqualTo(1));
         }
@@ -753,6 +754,7 @@ namespace Mirror.Tests
             // OnStopClient from being called in the second one
             // exception will log an error
             LogAssert.ignoreFailingMessages = true;
+            identity.OnStartClient();
             identity.OnStopClient();
             LogAssert.ignoreFailingMessages = false;
             Assert.That(compEx.called, Is.EqualTo(1));

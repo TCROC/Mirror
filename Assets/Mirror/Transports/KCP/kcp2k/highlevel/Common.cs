@@ -16,7 +16,7 @@ namespace kcp2k
             }
             catch (SocketException exception)
             {
-                Log.Info($"[KCP] Failed to resolve host: {hostname} reason: {exception}");
+                Log.Info($"Failed to resolve host: {hostname} reason: {exception}");
                 addresses = null;
                 return false;
             }
@@ -24,17 +24,26 @@ namespace kcp2k
 
         // if connections drop under heavy load, increase to OS limit.
         // if still not enough, increase the OS limit.
-        public static void MaximizeSocketBuffers(Socket socket)
+        public static void ConfigureSocketBuffers(Socket socket, int recvBufferSize, int sendBufferSize)
         {
             // log initial size for comparison.
             // remember initial size for log comparison
             int initialReceive = socket.ReceiveBufferSize;
             int initialSend    = socket.SendBufferSize;
 
-            socket.SetReceiveBufferToOSLimit();
-            socket.SetSendBufferToOSLimit();
+            // set to configured size
+            try
+            {
+                socket.ReceiveBufferSize = recvBufferSize;
+                socket.SendBufferSize    = sendBufferSize;
+            }
+            catch (SocketException)
+            {
+                Log.Warning($"Kcp: failed to set Socket RecvBufSize = {recvBufferSize} SendBufSize = {sendBufferSize}");
+            }
 
-            Log.Info($"[KCP] RecvBuf = {initialReceive}=>{socket.ReceiveBufferSize} ({socket.ReceiveBufferSize/initialReceive}x) SendBuf = {initialSend}=>{socket.SendBufferSize} ({socket.SendBufferSize/initialSend}x) maximized to OS limits!");
+
+            Log.Info($"Kcp: RecvBuf = {initialReceive}=>{socket.ReceiveBufferSize} ({socket.ReceiveBufferSize/initialReceive}x) SendBuf = {initialSend}=>{socket.SendBufferSize} ({socket.SendBufferSize/initialSend}x)");
         }
     }
 }

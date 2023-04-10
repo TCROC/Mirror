@@ -214,7 +214,7 @@ namespace Mirror.Tests
             NetworkServer.Listen(1);
 
             // set local connection
-            CreateLocalConnectionPair(out LocalConnectionToClient connectionToClient, out _);
+            Utils.CreateLocalConnections(out LocalConnectionToClient connectionToClient, out _);
             NetworkServer.SetLocalConnection(connectionToClient);
 
             // remove local connection
@@ -223,15 +223,15 @@ namespace Mirror.Tests
         }
 
         [Test]
-        public void LocalClientActive()
+        public void ActiveHost()
         {
             // listen
             NetworkServer.Listen(1);
-            Assert.That(NetworkServer.localClientActive, Is.False);
+            Assert.That(NetworkServer.activeHost, Is.False);
 
             // set local connection
             NetworkServer.SetLocalConnection(new LocalConnectionToClient());
-            Assert.That(NetworkServer.localClientActive, Is.True);
+            Assert.That(NetworkServer.activeHost, Is.True);
         }
 
         [Test]
@@ -840,28 +840,6 @@ namespace Mirror.Tests
         }
 
         [Test]
-        public void ActivateHostSceneCallsOnStartClient()
-        {
-            // listen & connect
-            NetworkServer.Listen(1);
-            ConnectClientBlockingAuthenticatedAndReady(out _);
-
-            // spawn identity with a networkbehaviour.
-            // (needs to be in .spawned for ActivateHostScene)
-            CreateNetworkedAndSpawn(
-                out _, out NetworkIdentity serverIdentity, out OnStartClientTestNetworkBehaviour serverComp,
-                out _, out _, out _);
-
-            // ActivateHostScene calls OnStartClient for spawned objects where
-            // isClient is still false. set it to false first.
-            serverIdentity.isClient = false;
-            NetworkServer.ActivateHostScene();
-
-            // was OnStartClient called for all .spawned networkidentities?
-            Assert.That(serverComp.called, Is.EqualTo(1));
-        }
-
-        [Test]
         public void SendToAll()
         {
             // message handler
@@ -1177,11 +1155,10 @@ namespace Mirror.Tests
             Assert.That(NetworkServer.connections.Count, Is.EqualTo(0));
             Assert.That(NetworkServer.connectionsCopy.Count, Is.EqualTo(0));
             Assert.That(NetworkServer.handlers.Count, Is.EqualTo(0));
-            Assert.That(NetworkServer.newObservers.Count, Is.EqualTo(0));
             Assert.That(NetworkServer.spawned.Count, Is.EqualTo(0));
 
             Assert.That(NetworkServer.localConnection, Is.Null);
-            Assert.That(NetworkServer.localClientActive, Is.False);
+            Assert.That(NetworkServer.activeHost, Is.False);
 
             Assert.That(NetworkServer.OnConnectedEvent, Is.Null);
             Assert.That(NetworkServer.OnDisconnectedEvent, Is.Null);
@@ -1221,7 +1198,7 @@ namespace Mirror.Tests
         [Test]
         public void HasExternalConnections_WithHostOnly()
         {
-            CreateLocalConnectionPair(out LocalConnectionToClient connectionToClient, out _);
+            Utils.CreateLocalConnections(out LocalConnectionToClient connectionToClient, out _);
 
             NetworkServer.SetLocalConnection(connectionToClient);
             NetworkServer.connections.Add(0, connectionToClient);
@@ -1235,7 +1212,7 @@ namespace Mirror.Tests
         [Test]
         public void HasExternalConnections_WithHostAndConnection()
         {
-            CreateLocalConnectionPair(out LocalConnectionToClient connectionToClient, out _);
+            Utils.CreateLocalConnections(out LocalConnectionToClient connectionToClient, out _);
 
             NetworkServer.SetLocalConnection(connectionToClient);
             NetworkServer.connections.Add(0, connectionToClient);
