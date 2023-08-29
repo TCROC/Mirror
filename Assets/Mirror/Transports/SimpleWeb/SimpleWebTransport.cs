@@ -7,13 +7,17 @@ using UnityEngine.Serialization;
 namespace Mirror.SimpleWeb
 {
     [DisallowMultipleComponent]
-    public class SimpleWebTransport : Transport
+    public class SimpleWebTransport : Transport, PortTransport
     {
         public const string NormalScheme = "ws";
         public const string SecureScheme = "wss";
 
         [Tooltip("Port to use for server and client")]
         public ushort port = 7778;
+        public ushort Port { get => port; set => port=value; }
+
+        [Tooltip("Tells the client to use the default port. This is useful when connecting to reverse proxy rather than directly to websocket server")]
+        public bool ClientUseDefaultPort;
 
         [Tooltip("Protect against allocation attacks by keeping the max message size small. Otherwise an attacker might send multiple fake packets with 2GB headers, causing the server to run out of memory after allocating multiple large packets.")]
         public int maxMessageSize = 16 * 1024;
@@ -60,9 +64,9 @@ namespace Mirror.SimpleWeb
         public SslProtocols sslProtocols = SslProtocols.Tls12;
 
         [Header("Debug")]
-        [Tooltip("Log functions uses ConditionalAttribute which will effect which log methods are allowed. DEBUG allows warn/error, SIMPLEWEB_LOG_ENABLED allows all")]
+        [Tooltip("Log functions uses ConditionalAttribute which will effect which log methods are allowed.")]
         [FormerlySerializedAs("logLevels")]
-        [SerializeField] Log.Levels _logLevels = Log.Levels.info;
+        [SerializeField] Log.Levels _logLevels = Log.Levels.warn;
 
         /// <summary>
         /// <para>Gets _logLevels field</para>
@@ -121,8 +125,10 @@ namespace Mirror.SimpleWeb
             {
                 Scheme = GetClientScheme(),
                 Host = hostname,
-                Port = port
             };
+            // https://github.com/MirrorNetworking/Mirror/pull/3477
+            if (!ClientUseDefaultPort)
+                builder.Port = Port;
 
             ClientConnect(builder.Uri);
         }
@@ -284,6 +290,8 @@ namespace Mirror.SimpleWeb
         }
 
         public override string ServerGetClientAddress(int connectionId) => server.GetClientAddress(connectionId);
+
+        public Request ServerGetClientRequest(int connectionId) => server.GetClientRequest(connectionId);
 
         // messages should always be processed in early update
         public override void ServerEarlyUpdate()
